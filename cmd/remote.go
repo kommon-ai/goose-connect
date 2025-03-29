@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/kommon-ai/agent-connect/pkg/service"
+	"github.com/kommon-ai/goose-connect/pkg/config"
 	"github.com/kommon-ai/goose-connect/pkg/goose"
 	"github.com/spf13/cobra"
 )
@@ -17,19 +18,24 @@ import (
 // remoteCmd represents the remote command
 var remoteCmd = &cobra.Command{
 	Use:   "remote",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "リモートエージェントサーバーを起動",
+	Long: `リモートエージェントサーバーを指定されたポートで起動します。
+このサーバーはGooseエージェントのリモート実行を可能にし、
+HTTPエンドポイントを通じてエージェントとの通信を提供します。
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+使用例:
+  goose-connect remote --port 8080
+
+サーバーは指定されたポートでリッスンを開始し、
+エージェントタスクの実行要求を受け付けます。`,
 	Run: func(cmd *cobra.Command, args []string) {
 		port, err := cmd.Flags().GetInt("port")
 		if err != nil {
 			log.Fatalf("Failed to get port: %v", err)
 		}
-
+		if err := config.ValidateRequiredValues(); err != nil {
+			log.Fatalf("Failed to validate config: %v", err)
+		}
 		remoteAgent := service.NewRemoteAgentServer(goose.NewGooseAgentFactory())
 
 		// ハンドラの作成

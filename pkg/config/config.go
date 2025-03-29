@@ -76,3 +76,11 @@ func (c *Config) GetGitUser() string {
 func (c *Config) GetGitMail() string {
 	return viper.GetString("git_mail")
 }
+
+func ValidateRequiredValues() error {
+	cfg, err := NewConfig()
+	if err != nil {
+		return err
+	}
+	return cfg.ValidateRequiredValues()
+}
