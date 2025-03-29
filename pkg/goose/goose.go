@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/kommon-ai/agent-go/pkg/agent"
+	"github.com/kommon-ai/goose-connect/pkg/config"
 	"github.com/spf13/viper"
 )
 
@@ -168,6 +169,7 @@ type GooseAgent struct {
 	Opts    GooseOptions
 	Env     agent.AgentEnv
 	baseDir string
+	cfg     *config.Config
 }
 
 type GooseOptions struct {
@@ -189,15 +191,19 @@ func (a *GooseAgent) GetEnv() agent.AgentEnv {
 
 // NewGooseAgent creates a new Goose agent
 func NewGooseAgent(opts GooseOptions) (agent.Agent, error) {
+	cfg, err := config.NewConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create config: %w", err)
+	}
 	if opts.SessionID == "" {
 		return nil, fmt.Errorf("session ID is required for Goose agent")
 	}
 	opts.SessionID = strings.ReplaceAll(opts.SessionID, "/", "-")
 	var baseDir string
-	if os.Getenv("KOMMON_DEBUG_BASEDIR") != "" {
-		baseDir = os.Getenv("KOMMON_DEBUG_BASEDIR")
+	if cfg.GetBaseDir() != "" {
+		baseDir = cfg.GetBaseDir()
 	} else {
-		baseDir = fmt.Sprintf("%s/.config/kommon", os.Getenv("HOME"))
+		baseDir = fmt.Sprintf("%s/.config/goose-connect", os.Getenv("HOME"))
 	}
 	if err := os.MkdirAll(baseDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create base directory: %w", err)
@@ -227,6 +233,7 @@ func NewGooseAgent(opts GooseOptions) (agent.Agent, error) {
 			EnvFilePath:         filepath.Join(sessionDir, "env"),
 		},
 		baseDir: baseDir,
+		cfg:     cfg,
 	}
 
 	return agent, nil
@@ -299,16 +306,7 @@ func (a *GooseAgent) parseConfig() error {
   developer:
     enabled: true
     name: developer
-    type: builtin
-  goose:
-    args:
-    - goose-mcp
-    cmd: kommon
-    enabled: false
-    envs:
-      GITHUB_TOKEN: {{ .GitHub.InstallationToken }}
-    name: goose
-    type: stdio`
+    type: builtin`
 
 	// テンプレートファイルを読み込む
 	tpl, err := template.New("config").Parse(templateContent)
@@ -410,6 +408,8 @@ func (a *GooseAgent) GetAPIKeyEnv() string {
 // 引数の instructionPath は指示ファイルのパスです
 // 戻り値は生成されたスクリプトファイルとエラーです
 func (a *GooseAgent) getExecutionScriptFile(envFilePath string) string {
+	gituser := a.cfg.GetGitUser()
+	gitmail := a.cfg.GetGitMail()
 	script := fmt.Sprintf(`#!/bin/bash
 source %s
 SESSION_DIR=$BASE_DIR/$SESSION_ID
@@ -426,8 +426,8 @@ else
   cd $SESSION_DIR/repo
 fi
 
-git config --global user.email "198929385+kommon-ai[bot]@users.noreply.github.com"
-git config --global user.name "kommon-ai[bot]"
+git config --global user.email "%s"
+git config --global user.name "%s"
 
 # PRブランチが指定されている場合はそのブランチをチェックアウト
 if [ -n "$PR_BRANCH" ]; then
@@ -447,7 +447,7 @@ run_goose() {
 run_goose -r || run_goose
 wait
 
-`, envFilePath)
+`, envFilePath, gitmail, gituser)
 	return script
 }
 

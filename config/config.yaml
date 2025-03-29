@@ -1,0 +1,5 @@
+port: 8080
+url: "http://localhost:8080"
+base_dir: "$HOME/.goose-connect"
+git_user: ""
+git_mail: ""
