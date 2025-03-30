@@ -29,8 +29,6 @@ func NewConfig() (*Config, error) {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			return nil, fmt.Errorf("設定ファイルの読み込みに失敗しました: %w", err)
 		}
-		// 設定ファイルが見つからない場合は、環境変数とデフォルト値を使用
-		fmt.Println("設定ファイルが見つかりません。環境変数とデフォルト値を使用します。")
 	}
 
 	config := &Config{}
