@@ -3,7 +3,6 @@ package goose
 import (
 	"context"
 	"fmt"
-	"html/template"
 	"log"
 	"net/url"
 	"os"
@@ -14,7 +13,6 @@ import (
 
 	"github.com/kommon-ai/agent-go/pkg/agent"
 	"github.com/kommon-ai/goose-connect/pkg/config"
-	"github.com/spf13/viper"
 )
 
 type GooseAPIType string
@@ -300,48 +298,6 @@ func createFile(text string, filePath string, perm os.FileMode) (*os.File, error
 	return f, nil
 }
 
-func (a *GooseAgent) parseConfig() error {
-	configPath := viper.GetString("config_file_path")
-	templateContent := `extensions:
-  developer:
-    enabled: true
-    name: developer
-    type: builtin`
-
-	// テンプレートファイルを読み込む
-	tpl, err := template.New("config").Parse(templateContent)
-	if err != nil {
-		return fmt.Errorf("failed to parse template file: %w", err)
-	}
-
-	// 設定ファイルのディレクトリを作成
-	err = os.MkdirAll(filepath.Dir(configPath), 0755)
-	if err != nil {
-		return fmt.Errorf("failed to create config directory: %w", err)
-	}
-
-	// 設定ファイルを作成
-	f, err := os.OpenFile(configPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
-	if err != nil {
-		return fmt.Errorf("failed to create config file: %w", err)
-	}
-	defer f.Close()
-
-	// テンプレートを実行して設定ファイルに書き込む
-	err = tpl.Execute(f, a.Opts)
-	if err != nil {
-		return fmt.Errorf("failed to execute template: %w", err)
-	}
-
-	// ファイルをフラッシュして確実に書き込む
-	err = f.Sync()
-	if err != nil {
-		return fmt.Errorf("failed to sync config file: %w", err)
-	}
-
-	return nil
-}
-
 // m.key の名前のファイルを作成する
 func createFiles(m map[string]string) error {
 	for k, v := range m {
@@ -369,9 +325,6 @@ func (a *GooseAgent) Execute(ctx context.Context, input string) (string, error) 
 		gooseEnv.ScriptFIlePath:      a.getExecutionScriptFile(gooseEnv.EnvFilePath),
 	}); err != nil {
 		return "", fmt.Errorf("failed to create files: %w", err)
-	}
-	if err := a.parseConfig(); err != nil {
-		return "", fmt.Errorf("failed to parse config: %w", err)
 	}
 	// #nosec G204 -- This is a controlled environment where we create the script
 	cmd := exec.CommandContext(ctx, "bash", gooseEnv.ScriptFIlePath)
@@ -438,6 +391,7 @@ fi
 run_goose() {
   RESUME=$1
   goose run --name $SESSION_ID $RESUME \
+    --with-builtin "developer" \
     --with-extension "GITHUB_PERSONAL_ACCESS_TOKEN=$GITHUB_TOKEN mise exec -- npx -y @modelcontextprotocol/server-github" \
     --with-extension "MEMORY_BANK_ROOT=$HOME/.kommon/memory mise exec -- npx -y @allpepper/memory-bank-mcp" \
 	--with-extension "mise exec -- npx -y @modelcontextprotocol/server-sequential-thinking" \
