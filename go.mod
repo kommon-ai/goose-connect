@@ -1,6 +1,6 @@
 module github.com/kommon-ai/goose-connect
 
-go 1.19
+go 1.23.1
 
 require (
 	github.com/google/go-github/v57 v57.0.0
