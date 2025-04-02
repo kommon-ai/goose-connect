@@ -7,6 +7,7 @@ import (
         "testing"
 
         "github.com/kommon-ai/agent-go/pkg/agent"
+        "github.com/kommon-ai/goose-connect/pkg/config"
 )
 
 // MockProvider はテスト用のProvider実装です
