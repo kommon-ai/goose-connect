@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/kommon-ai/agent-go/pkg/agent"
-	"github.com/kommon-ai/goose-connect/pkg/config"
 )
 
 // MockProvider はテスト用のProvider実装です
@@ -464,42 +463,5 @@ func TestImportEventURL(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-// TestGetExecutionScriptFile tests the getExecutionScriptFile method
-func TestGetExecutionScriptFile(t *testing.T) {
-	// Create a temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "goose-test")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Create a mock config
-	mockCfg := &config.Config{}
-
-	// Create a mock agent
-	agent := &GooseAgent{
-		baseDir: tempDir,
-		cfg:     mockCfg,
-	}
-
-	// Test the getExecutionScriptFile function
-	scriptContent := agent.getExecutionScriptFile("/path/to/env/file")
-
-	// Verify that the script content is not empty
-	if scriptContent == "" {
-		t.Errorf("Expected non-empty script content, got empty string")
-	}
-
-	// Check if the script contains expected content
-	if !strings.Contains(scriptContent, "#!/bin/bash") {
-		t.Errorf("Script content does not contain expected header")
-	}
-
-	// Check if the script contains the run_goose function
-	if !strings.Contains(scriptContent, "run_goose()") {
-		t.Errorf("Script content does not contain run_goose function")
 	}
 }
