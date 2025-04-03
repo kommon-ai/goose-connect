@@ -327,7 +327,7 @@ func (a *GooseAgent) Execute(ctx context.Context, input string) (string, error) 
 		return "", fmt.Errorf("failed to create files: %w", err)
 	}
 	// #nosec G204 -- This is a controlled environment where we create the script
-	cmd := exec.CommandContext(ctx, "bash", gooseEnv.ScriptFIlePath, gooseEnv.EnvFilePath, a.cfg.GetGitMail(), a.cfg.GetGitUser())
+	cmd := exec.CommandContext(ctx, "bash", gooseEnv.ScriptFIlePath)
 	log.Printf("Executing command: %v", cmd.String())
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -357,36 +357,13 @@ func (a *GooseAgent) GetAPIKeyEnv() string {
 	return fmt.Sprintf("%s=%s", GetAPIKeyEnv(a.Opts.Provider.GetProviderName()), a.Opts.Provider.GetAPIKey())
 }
 
-// getExecutionScriptFile は実行用のシェルスクリプトの内容を返します
-// 引数の envFilePath は環境変数ファイルのパスです
-// 戻り値は生成されたスクリプトの内容です
+// createExecutionScriptFile は実行用のシェルスクリプトを生成し、一時ファイルとして保存します
+// 引数の instructionPath は指示ファイルのパスです
+// 戻り値は生成されたスクリプトファイルとエラーです
 func (a *GooseAgent) getExecutionScriptFile(envFilePath string) string {
 	gituser := a.cfg.GetGitUser()
 	gitmail := a.cfg.GetGitMail()
-
-	// スクリプトテンプレートを読み込む
-	// 実行ファイルのディレクトリを基準にスクリプトのパスを構築
-	execPath, err := os.Executable()
-	if err != nil {
-		log.Printf("Failed to get executable path: %v", err)
-		return getDefaultExecutionScript(envFilePath, gitmail, gituser)
-	}
-	execDir := filepath.Dir(execPath)
-	scriptPath := filepath.Join(execDir, "..", "scripts", "goose-execute.sh")
-	scriptContent, err := os.ReadFile(scriptPath)
-	if err != nil {
-		log.Printf("Failed to read script file: %v", err)
-		// スクリプトファイルが読み込めない場合はデフォルトのスクリプトを返す
-		return getDefaultExecutionScript(envFilePath, gitmail, gituser)
-	}
-
-	// スクリプトの内容をそのまま返す
-	return string(scriptContent)
-}
-
-// デフォルトの実行スクリプトを返す関数（スクリプトファイルが読み込めない場合のフォールバック）
-func getDefaultExecutionScript(envFilePath, gitmail, gituser string) string {
-	return fmt.Sprintf(`#!/bin/bash
+	script := fmt.Sprintf(`#!/bin/bash
 source %s
 SESSION_DIR=$BASE_DIR/$SESSION_ID
 REPO_URL=https://x-oauth-token:${GITHUB_TOKEN}@github.com/$REPO
@@ -423,7 +400,9 @@ run_goose() {
 }
 run_goose -r || run_goose
 wait
+
 `, envFilePath, gitmail, gituser)
+	return script
 }
 
 // GetSessionID returns the current session ID
