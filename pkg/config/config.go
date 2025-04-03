@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/viper"
 )
@@ -13,7 +14,7 @@ func NewConfig() (*Config, error) {
 	// デフォルト値の設定
 	viper.SetDefault("port", 8080)
 	viper.SetDefault("url", "http://localhost:8080")
-	viper.SetDefault("base_dir", "$HOME/.goose-connect")
+	viper.SetDefault("base_dir", fmt.Sprintf("%s/.goose-connect", os.Getenv("HOME")))
 	viper.SetDefault("git_user", "")
 	viper.SetDefault("git_mail", "")
 
