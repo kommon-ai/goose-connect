@@ -156,3 +156,52 @@ func TestConfig_ValidateRequiredValues(t *testing.T) {
 		})
 	}
 }
+
+func TestConfig_GetInstructionPath(t *testing.T) {
+	// テスト前の状態を保存
+	oldValue := os.Getenv("GOOSECONNECT_INSTRUCTION_PATH")
+	defer os.Setenv("GOOSECONNECT_INSTRUCTION_PATH", oldValue)
+
+	tests := []struct {
+		name      string
+		envValue  string
+		expected  string
+	}{
+		{
+			name:      "デフォルト値の確認",
+			envValue:  "",
+			expected:  "/etc/goose-connect/instructions.md",
+		},
+		{
+			name:      "環境変数からの読み込み",
+			envValue:  "/custom/path/instructions.md",
+			expected:  "/custom/path/instructions.md",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// 環境変数を設定
+			if tt.envValue != "" {
+				os.Setenv("GOOSECONNECT_INSTRUCTION_PATH", tt.envValue)
+			} else {
+				os.Unsetenv("GOOSECONNECT_INSTRUCTION_PATH")
+			}
+
+			// 設定を読み込み (git_user と git_mail は必須なのでセット)
+			os.Setenv("GOOSECONNECT_GIT_USER", "testuser")
+			os.Setenv("GOOSECONNECT_GIT_MAIL", "test@example.com")
+			
+			config, err := NewConfig()
+			if err != nil {
+				t.Fatalf("Failed to create config: %v", err)
+			}
+
+			// GetInstructionPathの結果を検証
+			result := config.GetInstructionPath()
+			if result != tt.expected {
+				t.Errorf("GetInstructionPath() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
