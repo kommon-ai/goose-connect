@@ -8,6 +8,7 @@ import (
 )
 
 type Config struct {
+	InstructionPath string `mapstructure:"instruction_path"`
 }
 
 func NewConfig() (*Config, error) {
@@ -17,6 +18,7 @@ func NewConfig() (*Config, error) {
 	viper.SetDefault("base_dir", fmt.Sprintf("%s/.goose-connect", os.Getenv("HOME")))
 	viper.SetDefault("git_user", "")
 	viper.SetDefault("git_mail", "")
+	viper.SetDefault("instruction_path", "/etc/goose-connect/instructions.md")
 
 	// 環境変数の設定
 	viper.AutomaticEnv()
@@ -74,6 +76,10 @@ func (c *Config) GetGitUser() string {
 
 func (c *Config) GetGitMail() string {
 	return viper.GetString("git_mail")
+}
+
+func (c *Config) GetInstructionPath() string {
+	return viper.GetString("instruction_path")
 }
 
 func ValidateRequiredValues() error {
