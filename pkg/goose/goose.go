@@ -247,6 +247,33 @@ func (a *GooseAgent) sessionDir() string {
 }
 
 func (a *GooseAgent) getInstructionScript(input string) string {
+	// 設定からパスを取得
+	instructionPath := a.cfg.GetInstructionPath()
+	
+	// ファイルが存在するかチェック
+	if _, err := os.Stat(instructionPath); err == nil {
+		// ファイルが存在する場合は読み込む
+		instructionBytes, err := os.ReadFile(instructionPath)
+		if err == nil {
+			// ファイルの内容を入力と結合して返す
+			instructionContent := string(instructionBytes)
+			// プロンプトが最後に要求内容を追加する形式になっているかチェック
+			if !strings.Contains(instructionContent, "---") {
+				instructionContent = instructionContent + "\n---\n" + input + "\n---\n"
+			} else {
+				// 既に形式が含まれている場合はそのまま使用
+				instructionContent = strings.Replace(instructionContent, "{input}", input, -1)
+			}
+			log.Printf("Using instruction from file: %s", instructionPath)
+			return instructionContent
+		}
+		// 読み込みエラーの場合はログを出力してデフォルトの内容を使用
+		log.Printf("Failed to read instruction file: %v", err)
+	} else {
+		log.Printf("Instruction file not found at %s, using default instruction", instructionPath)
+	}
+	
+	// ファイルが存在しないか読み込みエラーの場合は、デフォルトのハードコードされた内容を使用
 	instruction := []string{
 		`あなたはソフトウェア開発のプロフェッショナルです。アーキテクチャ構成を検討したり、コードを記述することが得意です。`,
 		`言語のランタイムやパッケージマネージャは、mise を経由して使用してください。 mise exec -- の後に続けると実行することができます。必要に応じて mise 経由で言語等をインストールしてください。`,
