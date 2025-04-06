@@ -8,6 +8,7 @@ import (
 
 	"github.com/kommon-ai/agent-go/pkg/agent"
 	"github.com/kommon-ai/goose-connect/pkg/config"
+	"github.com/spf13/viper"
 )
 
 // MockProvider はテスト用のProvider実装です
@@ -503,3 +504,88 @@ func TestGetExecutionScriptFile(t *testing.T) {
 		t.Errorf("Script content does not contain run_goose function")
 	}
 }
+
+// TestGetInstructionScript tests the getInstructionScript method
+func TestGetInstructionScript(t *testing.T) {
+	// Create a temporary directory for testing
+	tempDir, err := os.MkdirTemp("", "goose-test-instruction-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Create test instruction file
+	testInstructionPath := fmt.Sprintf("%s/test-instructions.md", tempDir)
+	testInstruction := "これはテスト用のインストラクションです。\n---\n{input}\n---"
+	if err := os.WriteFile(testInstructionPath, []byte(testInstruction), 0644); err != nil {
+		t.Fatalf("Failed to create test instruction file: %v", err)
+	}
+
+	// Test cases
+	testCases := []struct {
+		name                string
+		instructionPath     string
+		input               string
+		expectFileContent   bool
+		expectDefaultPrefix string
+	}{
+		{
+			name:                "Valid instruction file",
+			instructionPath:     testInstructionPath,
+			input:               "テスト入力",
+			expectFileContent:   true,
+			expectDefaultPrefix: "",
+		},
+		{
+			name:                "Non-existent file",
+			instructionPath:     fmt.Sprintf("%s/non-existent-file.md", tempDir),
+			input:               "テスト入力",
+			expectFileContent:   false,
+			expectDefaultPrefix: "あなたはソフトウェア開発のプロフェッショナルです",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// モックGetInstructionPathを作成するために一時的にviperを使用
+			oldInstructionPath := viper.GetString("instruction_path")
+			viper.Set("instruction_path", tc.instructionPath)
+			defer viper.Set("instruction_path", oldInstructionPath)
+
+			// Create a test agent
+			agent := &GooseAgent{
+				cfg:     &config.Config{},
+				baseDir: tempDir,
+				Opts: GooseOptions{
+					GitHub: &GooseGitHub{
+						Repo: "test-org/test-repo",
+					},
+					SessionID: "test-session-id",
+				},
+			}
+
+			// Call getInstructionScript
+			result := agent.getInstructionScript(tc.input)
+
+			// Check expectations
+			if tc.expectFileContent {
+				// Should contain content from the file
+				if !strings.Contains(result, "これはテスト用のインストラクションです") {
+					t.Errorf("Expected instruction from file but got different content: %s", result)
+				}
+			} else {
+				// Should contain default hardcoded content
+				if !strings.Contains(result, tc.expectDefaultPrefix) {
+					t.Errorf("Expected default instruction to contain '%s', but got: %s", 
+						tc.expectDefaultPrefix, result)
+				}
+			}
+
+			// The result should always contain the input
+			if !strings.Contains(result, tc.input) {
+				t.Errorf("Result does not contain input text '%s': %s", tc.input, result)
+			}
+		})
+	}
+}
+
